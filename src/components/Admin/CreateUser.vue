@@ -22,7 +22,9 @@
 import { reactive } from 'vue';
 import client from '../../utils/axios-comont';
 import { useRouter } from 'vue-router';
+import { useToast } from "../../utils/toast";
 const router = useRouter()
+const toast = useToast();
 
 const layout = {
     labelCol: { span: 8 },
@@ -50,10 +52,13 @@ const formState = reactive({
 });
 const onFinish = (values: any) => {
 
-    client.post("/admin/create-user", values.user).then(() => {
+    client.post("/admin/create-user", values.user).then(({ data }) => {
+
         router.push({
             name: "user.list"
         })
+
+        toast.success(data.message);
     })
 };
 </script>

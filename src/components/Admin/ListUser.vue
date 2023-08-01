@@ -5,18 +5,18 @@
       <template v-if="column.dataIndex === 'name'">
         <div class="editable-cell">
           <div v-if="editableData[record.key]" class="editable-cell-input-wrapper">
-            <a-input v-model:value="editableData[record.key].name" @pressEnter="save(record.key)" />
-            <check-outlined class="editable-cell-icon-check" @click="save(record.key)" />
+            <a-input v-model:value="editableData[record.key].name" @pressEnter="save(record.id)" />
+            <check-outlined class="editable-cell-icon-check" @click="save(record.id)" />
           </div>
           <div v-else class="editable-cell-text-wrapper">
             {{ text || ' ' }}
-            <edit-outlined class="editable-cell-icon" @click="edit(record.key)" />
+            <edit-outlined class="editable-cell-icon" @click="edit(record.id)" />
           </div>
         </div>
       </template>
       <template v-else-if="column.dataIndex === 'operation'">
-        <a-popconfirm v-if="dataSource.length" title="Sure to delete?" @confirm="onDelete(record.key)">
-          <a>Delete</a>
+        <a-popconfirm v-if="dataSource.length" title="Sure to delete?" @confirm="onDelete(record.id)">
+          <button danger>Delete</button>
         </a-popconfirm>
       </template>
     </template>
@@ -27,10 +27,12 @@ import { computed, reactive, ref } from 'vue';
 import type { Ref, UnwrapRef } from 'vue';
 import { CheckOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { cloneDeep } from 'lodash-es';
-import client from "../../utils/axios-comont"
+import client from "../../utils/axios-comont";
+import { useToast } from "../../utils/toast";
+const toast = useToast();
 
 interface DataItem {
-  key: string;
+  id: string;
   name: string;
   email: string;
   age: number;
@@ -39,39 +41,49 @@ interface DataItem {
 
 const columns = [
   {
-    title: 'key',
-    dataIndex: 'key',
+    title: 'Id',
+    dataIndex: 'id',
   },
   {
-    title: 'name',
+    title: 'Name',
     dataIndex: 'name',
   },
   {
-    title: 'email',
+    title: 'Email',
     dataIndex: 'email',
   },
   {
-    title: 'age',
+    title: 'Age',
     dataIndex: 'age',
   }, {
-    title: 'phone',
+    title: 'Phone',
     dataIndex: 'phone',
+  }, ,
+  {
+    title: 'Actions',
+    dataIndex: 'operation',
   },
 ];
 const dataSource: Ref<DataItem[]> = ref([]);
 const count = computed(() => dataSource.value.length + 1);
 const editableData: UnwrapRef<Record<string, DataItem>> = reactive({});
 
-const edit = (key: string) => {
-  editableData[key] = cloneDeep(dataSource.value.filter(item => key === item.key)[0]);
+const edit = (id: string) => {
+  editableData[id] = cloneDeep(dataSource.value.filter(item => id === item.id)[0]);
 };
-const save = (key: string) => {
-  Object.assign(dataSource.value.filter(item => key === item.key)[0], editableData[key]);
-  delete editableData[key];
+const save = (id: string) => {
+  Object.assign(dataSource.value.filter(item => id === item.id)[0], editableData[id]);
+  delete editableData[id];
 };
 
-const onDelete = (key: string) => {
-  dataSource.value = dataSource.value.filter(item => item.key !== key);
+const onDelete = (id: string) => {
+
+  client.delete(`/admin/delete/${id}`).then(({ data }) => {
+    dataSource.value = dataSource.value.filter(item => item.id !== id);
+
+    toast.success(data.message);
+  });
+
 };
 // const handleAdd = () => {
 //   const newData = {
@@ -87,9 +99,9 @@ const onDelete = (key: string) => {
 const fetchPokemon = () => {
   try {
     client
-      .get("/admin/list-user")
+      .get(`/admin/list-user`)
       .then(({ data }) => {
-        data.map((item: any, index: any) => {
+        data.data.map((item: any, index: any) => {
           dataSource.value.push({
             ...item,
             key: index + 1
